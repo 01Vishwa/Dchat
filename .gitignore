@@ -1,0 +1,28 @@
+# ignore .env files
+.env
+.env.*
+!.env.example
+
+# ignore python caches
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# ignore node modules
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# ignore OS specific
+.DS_Store
+Thumbs.db
+
+# ignore generated exports
+export_*.docx
+
+/sample_data

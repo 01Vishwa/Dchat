@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+supabase
+langchain
+langchain-openai
+langchain-community
+langchain-text-splitters
+PyPDF2
+openpyxl
+python-docx
+python-multipart
+python-dotenv
