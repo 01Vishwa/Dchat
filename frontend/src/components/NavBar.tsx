@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
-import type { User } from '@supabase/supabase-js'
+import type { User, AuthChangeEvent, Session } from '@supabase/supabase-js'
 
 export default function NavBar() {
     const [user, setUser] = useState<User | null>(null)
@@ -13,12 +13,12 @@ export default function NavBar() {
 
     useEffect(() => {
         // Get initial user
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            setUser(user)
+        supabase.auth.getUser().then(({ data: { user: currentUser } }: { data: { user: User | null } }) => {
+            setUser(currentUser)
         })
 
         // Listen for auth state changes (login/logout)
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
             setUser(session?.user ?? null)
         })
 

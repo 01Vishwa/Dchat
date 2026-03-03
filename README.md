@@ -4,16 +4,6 @@ An AI-powered tool that automates completing vendor security assessments using i
 
 ---
 
-## Industry & Fictional Company
-
-**Industry:** Healthcare SaaS (HealthTech)
-
-**Company:** MediSync — A cloud-based SaaS platform providing electronic health records (EHR) management and telehealth services to mid-size healthcare clinics across the United States. Founded in 2019, serves 200+ clinics, and handles PHI for approximately 500K patients. MediSync regularly receives HIPAA vendor security assessments that must be completed using approved internal documentation.
-
----
-
-## What I Built
-
 A full-stack application where users can:
 
 1. **Sign up / Log in** — Supabase Auth with email/password

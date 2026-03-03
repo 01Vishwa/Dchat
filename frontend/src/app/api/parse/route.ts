@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server'
 
+// Vercel serverless function config
+export const maxDuration = 60 // seconds (requires Vercel Pro for >10s)
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: Request) {
     try {
         const formData = await request.formData()

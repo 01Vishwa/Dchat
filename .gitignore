@@ -24,5 +24,3 @@ Thumbs.db
 
 # ignore generated exports
 export_*.docx
-
-/sample_data
