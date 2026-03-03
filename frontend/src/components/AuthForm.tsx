@@ -34,7 +34,7 @@ export default function AuthForm({ type }: AuthFormProps) {
                     }
                 })
                 if (error) throw error
-                // Optionally show success or redirect
+                router.refresh()
                 router.push('/dashboard')
             } else {
                 const { error } = await supabase.auth.signInWithPassword({
@@ -42,6 +42,7 @@ export default function AuthForm({ type }: AuthFormProps) {
                     password,
                 })
                 if (error) throw error
+                router.refresh()
                 router.push('/dashboard')
             }
         } catch (err: any) {

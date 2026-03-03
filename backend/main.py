@@ -1,5 +1,6 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Body
-from fastapi.responses import FileResponse
+import traceback
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Body, Request
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.background import BackgroundTask
 from pydantic import BaseModel
@@ -13,6 +14,10 @@ from services.parser import parse_questionnaire
 from services.ingest import ingest_document
 from services.rag import generate_answer
 from services.export import generate_docx
+from services.auth import get_current_user
+
+# File size limit: 10MB
+MAX_FILE_SIZE = 10 * 1024 * 1024
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -37,23 +42,53 @@ async def health_check():
 
 @app.post("/api/parse")
 async def parse_and_ingest(
-    user_id: str = Form(...),
+    request: Request,
+    user_id: str = Form(""),
     questionnaire: UploadFile = File(...),
     references: List[UploadFile] = File(...)
 ):
     """
     Combined Parse + Ingest Endpoint.
-    1. Parses the questionnaire
-    2. Stores the run and questions in Supabase
-    3. Ingests all reference documents using LangChain
+    1. Validates authentication and file sizes
+    2. Parses the questionnaire
+    3. Stores the run and questions in Supabase
+    4. Ingests all reference documents using LangChain
     """
+    # --- Auth: extract user from JWT or fall back to form user_id ---
+    try:
+        authenticated_user_id = await get_current_user(request)
+    except HTTPException:
+        authenticated_user_id = None
+    
+    # Use JWT user if available, otherwise fall back to form field
+    resolved_user_id = authenticated_user_id or user_id
+    if not resolved_user_id:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    # --- File size validation ---
+    quest_bytes = await questionnaire.read()
+    if len(quest_bytes) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Questionnaire file too large. Maximum size is {MAX_FILE_SIZE // (1024*1024)}MB."
+        )
+    
+    for ref_file in references:
+        ref_content = await ref_file.read()
+        if len(ref_content) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Reference file '{ref_file.filename}' too large. Maximum size is {MAX_FILE_SIZE // (1024*1024)}MB."
+            )
+        # Seek back to start so we can read again later
+        await ref_file.seek(0)
+
     try:
         supabase = get_supabase()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
     # --- 1. Parse Questionnaire ---
-    quest_bytes = await questionnaire.read()
     try:
         questions = parse_questionnaire(quest_bytes, questionnaire.filename)
     except Exception as e:
@@ -61,7 +96,7 @@ async def parse_and_ingest(
 
     # Store run
     run_response = supabase.table("runs").insert({
-        "user_id": user_id,
+        "user_id": resolved_user_id,
         "questionnaire_filename": questionnaire.filename,
         "total_questions": len(questions)
     }).execute()
@@ -112,7 +147,7 @@ async def parse_and_ingest(
 
         # Create reference doc entry
         doc_resp = supabase.table("reference_docs").insert({
-            "user_id": user_id,
+            "user_id": resolved_user_id,
             "filename": ref_file.filename
         }).execute()
         
@@ -121,7 +156,7 @@ async def parse_and_ingest(
             doc_ids.append(doc_id)
             
             # Chunk and embed
-            chunks_created = ingest_document(ref_text, ref_file.filename, user_id, doc_id, supabase)
+            chunks_created = ingest_document(ref_text, ref_file.filename, resolved_user_id, doc_id, supabase)
             total_chunks += chunks_created
 
     return {
@@ -137,71 +172,98 @@ class GenerateRequest(BaseModel):
     question_ids: Optional[List[str]] = None
 
 @app.post("/api/generate")
-async def generate_answers(req: GenerateRequest):
+async def generate_answers(req: GenerateRequest, request: Request):
     """
     RAG pipeline generation for all questions linked to a given run.
-    1. Fetches questions for the run
-    2. Runs RAG via LangChain pg_vector
-    3. Updates the answer fields in Supabase
+    1. Validates authentication
+    2. Fetches questions for the run
+    3. Runs RAG via LangChain pg_vector
+    4. Updates the answer fields in Supabase
     """
     try:
-        supabase = get_supabase()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # --- Auth: extract user from JWT or fall back to body user_id ---
+        try:
+            authenticated_user_id = await get_current_user(request)
+        except HTTPException:
+            authenticated_user_id = None
+        
+        resolved_user_id = authenticated_user_id or req.user_id
+        if not resolved_user_id:
+            raise HTTPException(status_code=401, detail="Authentication required")
 
-    # Fetch questions for run
-    query = supabase.table("qa_pairs").select("*").eq("run_id", req.run_id)
-    if req.question_ids:
-        query = query.in_("id", req.question_ids)
-        
-    qa_resp = query.execute()
-    
-    if not qa_resp.data:
-        raise HTTPException(status_code=404, detail="No questions found for this run")
-        
-    questions = qa_resp.data
-    answered = 0
-    not_found = 0
-    conf_sum = 0
-    
-    # Process each question
-    for q in questions:
-        # Generate the answer
-        res = generate_answer(q['question_text'], req.user_id, supabase)
-        
-        # Update qa_pairs with generated answer
-        supabase.table("qa_pairs").update({
-            "generated_answer": res['answer'],
-            "citations": res['citations'],
-            "confidence": res['confidence'],
-            "evidence_snippets": res['evidence_snippets'],
-            "is_found": res['is_found']
-        }).eq("id", q['id']).execute()
-        
-        # Update run stats tracking
-        if res['is_found']:
-            answered += 1
-            conf_sum += res['confidence']
-        else:
-            not_found += 1
+        try:
+            supabase = get_supabase()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+        # Fetch questions for run
+        query = supabase.table("qa_pairs").select("*").eq("run_id", req.run_id)
+        if req.question_ids:
+            query = query.in_("id", req.question_ids)
             
-    # Update Run table overall totals
-    avg_confidence = conf_sum / max(answered, 1)  # avoid division by 0
-    supabase.table("runs").update({
-        "status": "completed",
-        "answered_count": answered,
-        "not_found_count": not_found
-    }).eq("id", req.run_id).execute()
-    
-    return {
-        "run_id": req.run_id,
-        "status": "completed",
-        "summary": {
-            "answered": answered,
-            "not_found": not_found,
-            "avg_confidence": round(avg_confidence, 2)
+        qa_resp = query.execute()
+        
+        if not qa_resp.data:
+            raise HTTPException(status_code=404, detail="No questions found for this run")
+            
+        questions = qa_resp.data
+        answered = 0
+        not_found = 0
+        conf_sum = 0
+        
+        # Process each question
+        for i, q in enumerate(questions):
+            print(f"  Processing question {i+1}/{len(questions)}: {q['question_text'][:60]}...")
+            # Generate the answer
+            res = generate_answer(q['question_text'], resolved_user_id, supabase)
+            
+            # Update qa_pairs with generated answer
+            supabase.table("qa_pairs").update({
+                "generated_answer": res['answer'],
+                "citations": res['citations'],
+                "confidence": res['confidence'],
+                "evidence_snippets": res['evidence_snippets'],
+                "is_found": res['is_found']
+            }).eq("id", q['id']).execute()
+            
+        # Get ALL questions for the run to calculate correct overall totals
+        all_qa_resp = supabase.table("qa_pairs").select("confidence,is_found").eq("run_id", req.run_id).execute()
+        all_questions = all_qa_resp.data or []
+        
+        total_answered = sum(1 for q in all_questions if q.get('is_found', False))
+        total_not_found = len(all_questions) - total_answered
+        total_confidence = sum(q.get('confidence', 0) for q in all_questions if q.get('is_found', False))
+        
+        avg_confidence = total_confidence / max(total_answered, 1)
+
+        # Update Run table overall totals
+        supabase.table("runs").update({
+            "status": "completed",
+            "answered_count": total_answered,
+            "not_found_count": total_not_found
+        }).eq("id", req.run_id).execute()
+        
+        return {
+            "run_id": req.run_id,
+            "status": "completed",
+            "summary": {
+                "answered": total_answered,
+                "not_found": total_not_found,
+                "avg_confidence": round(avg_confidence, 2)
+            }
         }
-    }
+    except HTTPException:
+        raise  # Let FastAPI handle HTTP exceptions normally
+    except Exception as e:
+        print(f"\n{'='*60}")
+        print(f"ERROR in /api/generate:")
+        print(f"{'='*60}")
+        traceback.print_exc()
+        print(f"{'='*60}\n")
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e), "detail": traceback.format_exc()}
+        )
 
 class ExportRequest(BaseModel):
     run_id: str

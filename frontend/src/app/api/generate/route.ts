@@ -22,7 +22,11 @@ export async function POST(request: Request) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ run_id, user_id, question_ids }),
             })
-            if (!response.ok) throw new Error("Direct backend call failed")
+            if (!response.ok) {
+                const errText = await response.text()
+                console.error(`FastAPI /api/generate error (${response.status}):`, errText)
+                throw new Error(`Backend error (${response.status}): ${errText}`)
+            }
 
             const result = await response.json()
             return NextResponse.json(result)

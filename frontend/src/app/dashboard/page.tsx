@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
 export default async function DashboardPage() {
-    const supabase = createSupabaseServerClient()
+    const supabase = await createSupabaseServerClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
@@ -39,7 +39,7 @@ export default async function DashboardPage() {
                 <ul className="divide-y divide-gray-200">
                     {!runs || runs.length === 0 ? (
                         <li className="px-4 py-8 text-center text-gray-500">
-                            No runs found yet. Click "New Run" to start.
+                            No runs found yet. Click &quot;New Run&quot; to start.
                         </li>
                     ) : (
                         runs.map((run) => (

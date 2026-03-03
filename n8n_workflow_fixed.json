@@ -1,0 +1,630 @@
+{
+    "nodes": [
+        {
+            "parameters": {
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+            "typeVersion": 1.4,
+            "position": [
+                912,
+                1168
+            ],
+            "id": "9d0ba527-cb5e-4a44-a6b3-c09fca3aba3d",
+            "name": "When chat message received",
+            "webhookId": "10501ced-0f40-421a-a425-8c405f284578"
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "={{ $json.chatInput }}",
+                "options": {
+                    "systemMessage": "You are a helpful AI assistant with access to a knowledge base. Use the document retrieval tool to find relevant information from uploaded documents to answer user questions accurately. Always cite information from the retrieved documents when available."
+                }
+            },
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 3.1,
+            "position": [
+                1200,
+                960
+            ],
+            "id": "1b303e56-784c-4601-8618-87fc4159c240",
+            "name": "AI Agent"
+        },
+        {
+            "parameters": {
+                "model": {
+                    "__rl": true,
+                    "value": "gpt-4o-mini",
+                    "mode": "list",
+                    "cachedResultName": "gpt-4o-mini"
+                },
+                "builtInTools": {},
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+            "typeVersion": 1.3,
+            "position": [
+                1136,
+                1184
+            ],
+            "id": "da4c33ab-fba1-49d6-b0ac-526adccb0ab2",
+            "name": "OpenAI Chat Model",
+            "credentials": {
+                "openAiApi": {
+                    "id": "owwBvRDvj6wELmrn",
+                    "name": "n8n free OpenAI API credits"
+                }
+            }
+        },
+        {
+            "parameters": {},
+            "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+            "typeVersion": 1.3,
+            "position": [
+                1264,
+                1184
+            ],
+            "id": "fabc1852-49e8-48f4-bb2f-e482bc2be6c1",
+            "name": "Simple Memory"
+        },
+        {
+            "parameters": {
+                "chunkOverlap": 200,
+                "options": {}
+            },
+            "id": "98f79cf2-b1c8-4f42-8da1-95d97c866e35",
+            "name": "Chunk Text",
+            "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+            "typeVersion": 1,
+            "position": [
+                1200,
+                2032
+            ]
+        },
+        {
+            "parameters": {
+                "options": {}
+            },
+            "id": "9baf4ab7-aef2-4162-9ebd-1b2fbb8277da",
+            "name": "OpenAI Embeddings",
+            "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+            "typeVersion": 1.1,
+            "position": [
+                992,
+                1840
+            ],
+            "credentials": {
+                "openAiApi": {
+                    "id": "owwBvRDvj6wELmrn",
+                    "name": "n8n free OpenAI API credits"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "mode": "insert",
+                "tableName": {
+                    "__rl": true,
+                    "mode": "id",
+                    "value": "documents"
+                },
+                "options": {
+                    "queryName": "match_documents"
+                }
+            },
+            "id": "f4478a93-662f-4383-b392-dc679545300c",
+            "name": "Store in Supabase",
+            "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+            "typeVersion": 1,
+            "position": [
+                1040,
+                1584
+            ],
+            "credentials": {
+                "supabaseApi": {
+                    "id": "4qGUTct5nkvo1qrI",
+                    "name": "Supabase account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "mode": "retrieve-as-tool",
+                "toolName": "document_search",
+                "toolDescription": "Search the knowledge base for relevant information from uploaded documents. Use this tool to find answers to user questions.",
+                "tableName": {
+                    "__rl": true,
+                    "mode": "id",
+                    "value": "documents"
+                },
+                "topK": 5,
+                "options": {
+                    "queryName": "match_documents",
+                    "metadata": {
+                        "metadataValues": [
+                            {
+                                "name": "user_id",
+                                "value": "={{ $json.user_id }}"
+                            }
+                        ]
+                    }
+                }
+            },
+            "id": "fd13a3ce-06c1-4fda-8137-18fa2bab4f0b",
+            "name": "Retrieve from Supabase",
+            "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+            "typeVersion": 1,
+            "position": [
+                1392,
+                1184
+            ],
+            "credentials": {
+                "supabaseApi": {
+                    "id": "4qGUTct5nkvo1qrI",
+                    "name": "Supabase account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "options": {}
+            },
+            "id": "eeefedf3-739c-44bb-acc2-d08afa0bcdd3",
+            "name": "OpenAI Embeddings for Retrieval",
+            "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+            "typeVersion": 1.1,
+            "position": [
+                1472,
+                1392
+            ],
+            "credentials": {
+                "openAiApi": {
+                    "id": "owwBvRDvj6wELmrn",
+                    "name": "n8n free OpenAI API credits"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "dataType": "binary",
+                "options": {}
+            },
+            "id": "fbfdb66b-01ab-4fee-96f6-3d845a79b22e",
+            "name": "Load Document",
+            "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+            "typeVersion": 1,
+            "position": [
+                1120,
+                1840
+            ]
+        },
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "upload-document",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "b64470b3-0d72-48cc-a0b1-32bf9f705ea9",
+            "name": "Document Upload Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2.1,
+            "position": [
+                768,
+                1616
+            ],
+            "webhookId": "03ce3a09-e8f9-47ee-b989-f0794f18f4f2"
+        },
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "parse-and-ingest",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "77068411-ab29-4ebe-8a4a-19b9f38405f1",
+            "name": "Parse Questionnaire Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2.1,
+            "position": [
+                2048,
+                1760
+            ],
+            "webhookId": "60420e84-66ee-4110-9f76-3d173d08ca8c"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://localhost:8000/api/parse",
+                "sendBody": true,
+                "contentType": "multipart-form-data",
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "parameterType": "formBinaryData",
+                            "name": "questionnaire",
+                            "inputDataFieldName": "={{ $('Parse Questionnaire Webhook').item.binary.questionnaire }}"
+                        },
+                        {
+                            "parameterType": "formBinaryData",
+                            "name": "references",
+                            "inputDataFieldName": "={{ $('Parse Questionnaire Webhook').item.binary.references }}"
+                        },
+                        {
+                            "parameterType": "formData",
+                            "name": "user_id",
+                            "value": "={{ $('Parse Questionnaire Webhook').item.json.body.user_id }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "a5f69458-6be0-4136-bdd5-d135cbd66b2d",
+            "name": "Call FastAPI Parse",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                2272,
+                1760
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={\n  \"run_id\": \"{{ $('Call FastAPI Parse').item.json.run_id }}\",\n  \"question_count\": {{ $('Call FastAPI Parse').item.json.question_count }},\n  \"chunks_created\": {{ $('Call FastAPI Parse').item.json.chunks_created }}\n}",
+                "options": {}
+            },
+            "id": "6e786949-3a32-4879-9893-b3142e224977",
+            "name": "Return Parse Results",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.5,
+            "position": [
+                2496,
+                1760
+            ]
+        },
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "generate",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "20be0f34-b957-49ec-95b8-9ff6ebda0c77",
+            "name": "Generate Answers Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2.1,
+            "position": [
+                2048,
+                1536
+            ],
+            "webhookId": "8f41c62a-3526-4a5b-a9f0-58b84140dcb2"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://localhost:8000/api/generate",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"run_id\": \"{{ $('Generate Answers Webhook').item.json.body.run_id }}\",\n  \"user_id\": \"{{ $('Generate Answers Webhook').item.json.body.user_id }}\"\n}",
+                "options": {}
+            },
+            "id": "af071401-f3e3-46d6-8317-b8829e80b661",
+            "name": "Call FastAPI Generate",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                2272,
+                1536
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={\n  \"status\": \"{{ $('Call FastAPI Generate').item.json.status }}\",\n  \"run_id\": \"{{ $('Call FastAPI Generate').item.json.run_id }}\",\n  \"summary\": {{ JSON.stringify($('Call FastAPI Generate').item.json.summary) }}\n}",
+                "options": {}
+            },
+            "id": "13ef60a0-af16-4544-968d-a9902d1512f2",
+            "name": "Return Generation Results",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.5,
+            "position": [
+                2496,
+                1536
+            ]
+        },
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "export",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "10f59839-3000-4192-aa9c-6773bf1ea5d0",
+            "name": "Export DOCX Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2.1,
+            "position": [
+                2048,
+                1312
+            ],
+            "webhookId": "a0809e12-442c-412b-83d0-b7a0450c9391"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://localhost:8000/api/export",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"run_id\": \"{{ $('Export DOCX Webhook').item.json.body.run_id }}\"\n}",
+                "options": {
+                    "response": {
+                        "response": {
+                            "responseFormat": "file"
+                        }
+                    }
+                }
+            },
+            "id": "8c161518-61fe-40df-9f90-7647c1324236",
+            "name": "Call FastAPI Export",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                2272,
+                1312
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "binary",
+                "options": {
+                    "responseHeaders": {
+                        "entries": [
+                            {
+                                "name": "Content-Type",
+                                "value": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            },
+                            {
+                                "name": "Content-Disposition",
+                                "value": "attachment; filename=\"questionnaire.docx\""
+                            }
+                        ]
+                    }
+                }
+            },
+            "id": "9e252198-4aa1-4aef-ba0f-595245da5524",
+            "name": "Return DOCX File",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.5,
+            "position": [
+                2496,
+                1312
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={\n  \"response\": \"{{ $('AI Agent').item.json.output }}\",\n  \"sessionId\": \"{{ $('When chat message received').item.json.sessionId }}\"\n}",
+                "options": {}
+            },
+            "id": "aab7631c-03cf-4993-9593-2028c278a1c6",
+            "name": "Return Chat Response",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.5,
+            "position": [
+                2048,
+                2208
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "{\n  \"status\": \"success\",\n  \"message\": \"Document uploaded and indexed successfully\"\n}",
+                "options": {}
+            },
+            "id": "abb76596-de69-4374-8e4c-3211c583ceab",
+            "name": "Return Upload Confirmation",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.5,
+            "position": [
+                2048,
+                1984
+            ]
+        }
+    ],
+    "connections": {
+        "When chat message received": {
+            "main": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Agent": {
+            "main": [
+                [
+                    {
+                        "node": "Return Chat Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "OpenAI Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Simple Memory": {
+            "ai_memory": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "ai_memory",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Chunk Text": {
+            "ai_textSplitter": [
+                [
+                    {
+                        "node": "Load Document",
+                        "type": "ai_textSplitter",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "OpenAI Embeddings": {
+            "ai_embedding": [
+                [
+                    {
+                        "node": "Store in Supabase",
+                        "type": "ai_embedding",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Store in Supabase": {
+            "main": [
+                [
+                    {
+                        "node": "Return Upload Confirmation",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Retrieve from Supabase": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "OpenAI Embeddings for Retrieval": {
+            "ai_embedding": [
+                [
+                    {
+                        "node": "Retrieve from Supabase",
+                        "type": "ai_embedding",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Load Document": {
+            "ai_document": [
+                [
+                    {
+                        "node": "Store in Supabase",
+                        "type": "ai_document",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Document Upload Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Store in Supabase",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Parse Questionnaire Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Call FastAPI Parse",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Call FastAPI Parse": {
+            "main": [
+                [
+                    {
+                        "node": "Return Parse Results",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Generate Answers Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Call FastAPI Generate",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Call FastAPI Generate": {
+            "main": [
+                [
+                    {
+                        "node": "Return Generation Results",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Export DOCX Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Call FastAPI Export",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Call FastAPI Export": {
+            "main": [
+                [
+                    {
+                        "node": "Return DOCX File",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "7689c127ae5d4f193be68f8552ab0e5ae09ca4428ca3ac423fd98ac7f4a122ae"
+    }
+}

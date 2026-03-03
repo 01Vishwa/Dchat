@@ -29,7 +29,10 @@ export async function POST(request: Request) {
                 method: 'POST',
                 body: backendFormData,
             })
-            if (!response.ok) throw new Error("Direct backend call failed")
+            if (!response.ok) {
+                const errText = await response.text()
+                throw new Error(`Backend error (${response.status}): ${errText}`)
+            }
 
             const result = await response.json()
             return NextResponse.json(result)
@@ -54,13 +57,16 @@ export async function POST(request: Request) {
             // headers: { 'X-API-Key': process.env.YOUR_SECRET }
         })
 
+        const textResponse = await n8nResponse.text()
+
         if (!n8nResponse.ok) {
-            throw new Error(`n8n webhook failed with status: ${n8nResponse.status}`)
+            console.error("n8n Raw Failure:", textResponse)
+            throw new Error(`n8n Error ${n8nResponse.status}: ${textResponse}`)
         }
 
         // 4. Return result to frontend
         // n8n should respond with { run_id, question_count, chunks_created }
-        const result = await n8nResponse.json()
+        const result = JSON.parse(textResponse)
         return NextResponse.json(result)
 
     } catch (error: any) {

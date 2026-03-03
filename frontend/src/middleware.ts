@@ -54,7 +54,16 @@ export async function middleware(request: NextRequest) {
         }
     )
 
-    const { data: { user } } = await supabase.auth.getUser()
+    let user = null
+    try {
+        // Use getSession() in middleware — it reads from cookies (no network call).
+        // getUser() makes a fetch to Supabase which can fail in edge runtime.
+        // Server components / route handlers should still use getUser() for verification.
+        const { data: { session } } = await supabase.auth.getSession()
+        user = session?.user ?? null
+    } catch {
+        // Cookie parse failed — treat as unauthenticated
+    }
 
     const isAuthRoute = request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup'
 
