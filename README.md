@@ -4,7 +4,7 @@ An AI-powered tool that automates completing vendor security assessments using i
 
 ---
 
-A full-stack application where users can:
+## What The App Does
 
 1. **Sign up / Log in** — Supabase Auth with email/password
 2. **Upload a questionnaire** (PDF, XLSX, or DOCX) + reference documents
@@ -29,12 +29,72 @@ Next.js Frontend → n8n (Orchestration) → FastAPI Backend → Supabase (Auth 
 | Orchestration | n8n (3 workflows) | Multi-step workflow coordination |
 | Database | Supabase PostgreSQL + pgvector | Data + vector similarity search |
 
-### Nice-to-Have Features Implemented (4 of 5)
+---
 
-- **Confidence Score** — Average cosine similarity from pgvector, displayed as color-coded badge
-- **Evidence Snippets** — Top 3 retrieved chunks shown per answer with source and similarity %
-- **Version History** — Dashboard shows all past runs with status, dates, and stats
-- **Coverage Summary** — Total questions, answered count, not-found count, coverage %, avg confidence
+## Feature Status
+
+### Phase 1: Core Workflow — ✅ Complete
+
+| Feature | Status | Notes |
+|---|---|---|
+| Sign up and log in | ✅ Done | Supabase Auth, email/password, middleware-protected routes |
+| Upload questionnaire (PDF/XLSX/DOCX) | ✅ Done | `FileUpload` component, backend `parser.py` |
+| Upload/store reference documents | ✅ Done | Multi-file upload, chunked & embedded via `ingest.py` |
+| Parse questionnaire into individual questions | ✅ Done | Supports PDF, XLSX, DOCX formats |
+| Retrieve relevant content from references | ✅ Done | pgvector similarity search via LangChain |
+| Generate answer per question | ✅ Done | `rag.py` — LangChain + OpenAI GPT-4o-mini |
+| Citation per answer | ✅ Done | Source document name + similarity score attached |
+| "Not found in references" fallback | ✅ Done | Returned when no relevant chunks found |
+| Structured web view (Question / Answer / Citations) | ✅ Done | `QATable` + `QuestionNav` sidebar for navigation |
+
+### Phase 2: Review & Export — ✅ Complete
+
+| Feature | Status | Notes |
+|---|---|---|
+| Review and edit answers before export | ✅ Done | Inline editing on the review page |
+| Export as downloadable document | ✅ Done | DOCX via `export.py` + `python-docx` |
+| Preserve original question order | ✅ Done | Questions exported in order |
+| Keep original questions unchanged | ✅ Done | Only answers inserted alongside |
+| Insert answers below/alongside questions | ✅ Done | Structured DOCX layout |
+| Include citations with each answer | ✅ Done | Citations appended per answer in export |
+
+### Nice-to-Have Features — 4 of 5 Implemented
+
+| # | Feature | Status | Details |
+|---|---|---|---|
+| 1 | Confidence Score | ✅ Done | Avg cosine similarity, color-coded `ConfidenceBadge` |
+| 2 | Evidence Snippets | ✅ Done | Top 3 retrieved chunks shown per answer with source & similarity % |
+| 3 | Partial Regeneration | ✅ Done | `question_ids` param in `/generate` endpoint + UI regenerate button |
+| 4 | Version History | ✅ Done | Dashboard shows all past runs with status, dates, and stats |
+| 5 | Coverage Summary | ✅ Done | `CoverageSummary` component — total, answered, not-found, coverage %, avg confidence |
+
+> **5 of 5 nice-to-have features are now implemented.**
+
+---
+
+## What's Missing / Known Gaps
+
+| Area | Gap | Impact |
+|---|---|---|
+| Backend auth | JWT tokens are not validated server-side; trusts `user_id` from request body | Security risk in production |
+| PDF export | Only DOCX export is available, no PDF option | Minor — DOCX covers the requirement |
+| Streaming responses | No SSE/WebSocket for real-time per-question progress | UX — user sees a loading spinner until all answers complete |
+| Batch DB inserts | Chunks are inserted in a loop, not batched | Performance on large reference docs |
+| File cleanup | Exported DOCX files are not auto-deleted after download | Disk space over time |
+| Hybrid retrieval | Vector-only search; no BM25 keyword fallback | Retrieval recall could be better |
+| Semantic chunking | Fixed character-window chunking, not section-aware | Chunk quality varies by document structure |
+
+---
+
+## Next Phase Improvements
+
+1. **Backend auth hardening** — Validate JWT tokens on every backend endpoint
+2. **Streaming generation** — SSE for real-time per-question answer progress
+3. **PDF export** — Add PDF alongside DOCX downloads
+4. **Hybrid retrieval** — Combine pgvector with BM25 keyword search
+5. **Semantic chunking** — Split documents by headings/sections instead of fixed windows
+6. **Batch operations** — Batch insert chunks and answers for performance
+7. **File lifecycle** — Auto-cleanup temp/exported files
 
 ---
 
@@ -101,16 +161,6 @@ This generates `questionnaire.xlsx` (12 HIPAA questions). The 5 reference `.txt`
 | Export | DOCX only | DOCX + PDF | python-docx is reliable, PDF adds complexity |
 | Orchestration | n8n (thin layer) | Direct frontend→backend | Visual workflows, separates concerns |
 
-## What I Would Improve With More Time
-
-1. **Hybrid retrieval** — Combine vector search with BM25 keyword search for better recall
-2. **Semantic chunking** — Split by document sections/headings instead of fixed character windows
-3. **Streaming responses** — Server-Sent Events for real-time per-question progress
-4. **PDF export** — Add PDF alongside DOCX
-5. **Backend auth validation** — Verify JWT tokens on the backend instead of trusting `user_id` from request body
-6. **Batch DB inserts** — Insert all chunks in one call instead of a loop
-7. **File cleanup** — Auto-delete exported DOCX files after download
-
 ---
 
 ## Project Structure
@@ -125,16 +175,21 @@ DChat/
 │       ├── parser.py         # Questionnaire parsing (PDF/XLSX/DOCX)
 │       ├── ingest.py         # Chunking + embedding (LangChain)
 │       ├── rag.py            # RAG answer generation (LangChain + OpenAI)
-│       └── export.py         # DOCX generation (python-docx)
+│       ├── export.py         # DOCX generation (python-docx)
+│       └── auth.py           # Authentication helper
 ├── frontend/
 │   └── src/
 │       ├── app/              # Next.js pages (login, signup, dashboard, upload, review)
-│       ├── components/       # UI components (QATable, CoverageSummary, etc.)
+│       ├── components/       # UI components (QATable, CoverageSummary, QuestionNav, etc.)
 │       ├── lib/supabase/     # Supabase client helpers
 │       └── middleware.ts     # Auth route protection
+├── n8n/
+│   └── n8n_workflow_fixed.json  # n8n orchestration workflow
 ├── sample_data/
 │   ├── create_xlsx.py        # Generates questionnaire.xlsx
 │   ├── questionnaire.xlsx    # 12 HIPAA assessment questions
 │   └── references/           # 5 reference documents (~400 words each)
-└── setup_db.sql              # Supabase database migration
+├── db/
+│   └── setup_db.sql          # Supabase database migration
+└── README.md
 ```
