@@ -107,6 +107,14 @@ Next.js Frontend → API Routes (Proxy) → n8n (Orchestration) → FastAPI Back
 
 ---
 
+> [!WARNING]
+> ### Supabase Login Issue
+> Authentication occasionally fails on some Wi-Fi networks due to Supabase connectivity issues. The login works reliably when switching to a mobile hotspot.
+> 
+> **Temporary Workaround:** Use the following credentials to access the application. The application already contains imported reference documents and generated questionnaire results to demonstrate the full workflow.
+> - **Username:** `test@gmail.com`
+> - **Password:** `123456@@`
+
 ## Database Schema
 
 5 tables managed in Supabase PostgreSQL with **Row Level Security (RLS)** enabled:
