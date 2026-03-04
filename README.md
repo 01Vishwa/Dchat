@@ -96,37 +96,14 @@ Next.js Frontend → API Routes (Proxy) → n8n (Orchestration) → FastAPI Back
 
 ## Tech Stack
 
-### Frontend
-
-| Package | Version | Purpose |
-|---|---|---|
-| Next.js | 16.x | React framework (App Router) |
-| React | 18.x | UI library |
-| Tailwind CSS | 3.4.x | Utility-first CSS |
-| @supabase/ssr | 0.8.x | Server-side Supabase auth |
-| @supabase/supabase-js | 2.98.x | Supabase client |
-| TypeScript | 5.x | Type safety |
-
-### Backend
-
-| Package | Purpose |
+| Layer | Technologies |
 |---|---|
-| FastAPI + Uvicorn | Async Python API server |
-| LangChain + langchain-openai | RAG pipeline (embeddings + generation) |
-| langchain-text-splitters | Document chunking |
-| supabase-py | Database access |
-| PyPDF2 | PDF parsing |
-| openpyxl | XLSX parsing |
-| python-docx | DOCX parsing + export generation |
-| python-dotenv | Environment variable management |
-
-### Infrastructure
-
-| Service | Purpose |
-|---|---|
-| Supabase | Auth + PostgreSQL + pgvector + RLS |
-| n8n | Workflow orchestration |
-| OpenAI / GitHub Models | LLM provider (configurable) |
+| **Frontend** | Next.js 16, React 18, TypeScript, Tailwind CSS |
+| **Auth** | Supabase Auth  |
+| **Backend** | FastAPI, Python, LangChain, OpenAI GitHub Model |
+| **Database** | Supabase PostgreSQL + pgvector |
+| **Orchestration** | n8n |
+| **Document Parsing** | PyPDF2, openpyxl, python-docx |
 
 ---
 
